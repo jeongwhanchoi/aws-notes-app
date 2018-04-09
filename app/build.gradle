@@ -23,7 +23,6 @@ android {
         versionName "1.0"
         multiDexEnabled true
         vectorDrawables.useSupportLibrary = true
-        multiDexEnabled true
     }
     buildTypes {
         release {
@@ -43,7 +42,4 @@ dependencies {
     compile 'com.android.support:design:26.1.0'
     compile 'com.android.support:multidex:1.0.1'
     compile 'joda-time:joda-time:2.9.9'
-    compile 'com.android.support:multidex:1.0.1'
-    compile 'com.amazonaws:aws-android-sdk-core:2.6.0'
-    compile ('com.amazonaws:aws-android-sdk-auth-core:2.6.0@aar')  {transitive = true;}
 }
