@@ -47,4 +47,8 @@ dependencies {
     implementation 'com.amazonaws:aws-android-sdk-core:2.6.+'
     implementation 'com.amazonaws:aws-android-sdk-auth-core:2.6.+@aar'
     implementation 'com.amazonaws:aws-android-sdk-pinpoint:2.6.+'
+
+    implementation 'com.amazonaws:aws-android-sdk-auth-ui:2.6.+@aar'
+    implementation 'com.amazonaws:aws-android-sdk-auth-userpools:2.6.+@aar'
+    implementation 'com.amazonaws:aws-android-sdk-cognitoidentityprovider:2.6.+'
 }
