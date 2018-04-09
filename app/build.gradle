@@ -42,4 +42,9 @@ dependencies {
     compile 'com.android.support:design:26.1.0'
     compile 'com.android.support:multidex:1.0.1'
     compile 'joda-time:joda-time:2.9.9'
+
+    // AWS Mobile SDK for Android
+    implementation 'com.amazonaws:aws-android-sdk-core:2.6.+'
+    implementation 'com.amazonaws:aws-android-sdk-auth-core:2.6.+@aar'
+    implementation 'com.amazonaws:aws-android-sdk-pinpoint:2.6.+'
 }
