@@ -25,6 +25,9 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.text.TextUtils;
 
+import com.amazonaws.mobile.samples.mynotes.AWSProvider;
+import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBMapper;
+
 import java.util.Locale;
 
 /**
@@ -148,19 +151,17 @@ public class NotesContentProvider extends ContentProvider {
         int uriType = sUriMatcher.match(uri);
         switch (uriType) {
             case ALL_ITEMS:
-                SQLiteDatabase db = databaseHelper.getWritableDatabase();
-                long id = db.insert(NotesContentContract.Notes.TABLE_NAME, null, values);
-                if (id > 0) {
-                    String noteId = values.getAsString(NotesContentContract.Notes.NOTEID);
-                    Uri item = NotesContentContract.Notes.uriBuilder(noteId);
-                    notifyAllListeners(item);
-                    return item;
-                }
-                throw new SQLException(String.format(Locale.US, "Error inserting for URI %s - id = %d", uri, id));
+                DynamoDBMapper dbMapper = AWSProvider.getInstance().getDynamoDBMapper();
+                final NotesDO newNote = toNotesDO(values);
+                dbMapper.save(newNote);
+                Uri item = NotesContentContract.Notes.uriBuilder(newNote.getNoteId());
+                notifyAllListeners(item);
+                return item;
             default:
                 throw new IllegalArgumentException("Unsupported URI: " + uri);
         }
     }
+
 
     /**
      * Delete one or more records from the SQLite database.
@@ -174,21 +175,15 @@ public class NotesContentProvider extends ContentProvider {
     public int delete(@NonNull Uri uri, @Nullable String selection, @Nullable String[] selectionArgs) {
         int uriType = sUriMatcher.match(uri);
         int rows;
-        SQLiteDatabase db = databaseHelper.getWritableDatabase();
+
         switch (uriType) {
-            case ALL_ITEMS:
-                rows = db.delete(
-                        NotesContentContract.Notes.TABLE_NAME,  // The table name
-                        selection, selectionArgs);              // The WHERE clause
-                break;
             case ONE_ITEM:
-                String where = getOneItemClause(uri.getLastPathSegment());
-                if (!TextUtils.isEmpty(selection)) {
-                    where += " AND " + selection;
-                }
-                rows = db.delete(
-                        NotesContentContract.Notes.TABLE_NAME,  // The table name
-                        where, selectionArgs);                  // The WHERE clause
+                DynamoDBMapper dbMapper = AWSProvider.getInstance().getDynamoDBMapper();
+                final NotesDO note = new NotesDO();
+                note.setNoteId(uri.getLastPathSegment());
+                note.setUserId(AWSProvider.getInstance().getIdentityManager().getCachedUserID());
+                dbMapper.delete(note);
+                rows = 1;
                 break;
             default:
                 throw new IllegalArgumentException("Unsupported URI: " + uri);
@@ -198,6 +193,7 @@ public class NotesContentProvider extends ContentProvider {
         }
         return rows;
     }
+
 
     /**
      * Part of the ContentProvider implementation.  Updates the record (based on the record URI)
@@ -213,23 +209,13 @@ public class NotesContentProvider extends ContentProvider {
     public int update(@NonNull Uri uri, @Nullable ContentValues values, @Nullable String selection, @Nullable String[] selectionArgs) {
         int uriType = sUriMatcher.match(uri);
         int rows;
-        SQLiteDatabase db = databaseHelper.getWritableDatabase();
+
         switch (uriType) {
-            case ALL_ITEMS:
-                rows = db.update(
-                        NotesContentContract.Notes.TABLE_NAME,  // The table name
-                        values,                                 // The values to replace
-                        selection, selectionArgs);              // The WHERE clause
-                break;
             case ONE_ITEM:
-                String where = getOneItemClause(uri.getLastPathSegment());
-                if (!TextUtils.isEmpty(selection)) {
-                    where += " AND " + selection;
-                }
-                rows = db.update(
-                        NotesContentContract.Notes.TABLE_NAME,  // The table name
-                        values,                                 // The values to replace
-                        where, selectionArgs);                  // The WHERE clause
+                DynamoDBMapper dbMapper = AWSProvider.getInstance().getDynamoDBMapper();
+                final NotesDO updatedNote = toNotesDO(values);
+                dbMapper.save(updatedNote);
+                rows = 1;
                 break;
             default:
                 throw new IllegalArgumentException("Unsupported URI: " + uri);
@@ -253,5 +239,37 @@ public class NotesContentProvider extends ContentProvider {
 
     private String getOneItemClause(String id) {
         return String.format("%s = \"%s\"", NotesContentContract.Notes.NOTEID, id);
+    }
+
+    private NotesDO toNotesDO(ContentValues values) {
+        final NotesDO note = new NotesDO();
+        note.setContent(values.getAsString(NotesContentContract.Notes.CONTENT));
+        note.setCreationDate(values.getAsDouble(NotesContentContract.Notes.CREATED));
+        note.setNoteId(values.getAsString(NotesContentContract.Notes.NOTEID));
+        note.setTitle(values.getAsString(NotesContentContract.Notes.TITLE));
+        note.setUpdatedDate(values.getAsDouble(NotesContentContract.Notes.UPDATED));
+        note.setUserId(AWSProvider.getInstance().getIdentityManager().getCachedUserID());
+        return note;
+    }
+
+    private Object[] fromNotesDO(NotesDO note) {
+        String[] fields = NotesContentContract.Notes.PROJECTION_ALL;
+        Object[] r = new Object[fields.length];
+        for (int i = 0 ; i < fields.length ; i++) {
+            if (fields[i].equals(NotesContentContract.Notes.CONTENT)) {
+                r[i] = note.getContent();
+            } else if (fields[i].equals(NotesContentContract.Notes.CREATED)) {
+                r[i] = note.getCreationDate();
+            } else if (fields[i].equals(NotesContentContract.Notes.NOTEID)) {
+                r[i] = note.getNoteId();
+            } else if (fields[i].equals(NotesContentContract.Notes.TITLE)) {
+                r[i] = note.getTitle();
+            } else if (fields[i].equals(NotesContentContract.Notes.UPDATED)) {
+                r[i] = note.getUpdatedDate();
+            } else {
+                r[i] = new Integer(0);
+            }
+        }
+        return r;
     }
 }
