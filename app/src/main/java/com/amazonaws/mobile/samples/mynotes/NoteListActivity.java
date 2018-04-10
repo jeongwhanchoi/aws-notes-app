@@ -13,6 +13,7 @@
 package com.amazonaws.mobile.samples.mynotes;
 
 import android.app.LoaderManager;
+import android.content.AsyncQueryHandler;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.CursorLoader;
@@ -33,6 +34,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.support.v7.widget.helper.ItemTouchHelper;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -306,12 +308,12 @@ public class NoteListActivity
          * Remove the element in the list.
          * @param holder the viewholder to delete
          */
+        private static final int DELETE_TOKEN = 1004;
+
         void remove(final NoteViewHolder holder) {
-            if (mTwoPane) {
+            if (mTwoPane ){
                 // Check to see if the current fragment is the record we are deleting
-                Fragment currentFragment = NoteListActivity.this
-                        .getSupportFragmentManager()
-                        .findFragmentById(R.id.note_detail_container);
+                Fragment currentFragment = NoteListActivity.this.getSupportFragmentManager().findFragmentById(R.id.note_detail_container);
                 if (currentFragment instanceof NoteDetailFragment) {
                     String deletedNote = holder.getNote().getNoteId();
                     String displayedNote = ((NoteDetailFragment) currentFragment).getNote().getNoteId();
@@ -322,13 +324,15 @@ public class NoteListActivity
             }
 
             // Remove the item from the database
-            ContentResolver resolver = getContentResolver();
-            int position = holder.getAdapterPosition();
-            Uri itemUri = NotesContentContract.Notes.uriBuilder(holder.getNote().getNoteId());
-            int count = resolver.delete(itemUri, null, null);
-            if (count > 0) {
-                notifyItemRemoved(position);
-            }
+            final int position = holder.getAdapterPosition();
+            AsyncQueryHandler queryHandler = new AsyncQueryHandler(getContentResolver()) {
+                @Override
+                protected void onDeleteComplete(int token, Object cookie, int result) {
+                    super.onDeleteComplete(token, cookie, result);
+                    notifyItemRemoved(position);
+                    Log.d("NoteListActivity", "delete completed");
+                }
+            };
         }
     }
 }
